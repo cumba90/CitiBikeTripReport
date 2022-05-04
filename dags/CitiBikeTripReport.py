@@ -35,6 +35,36 @@ with DAG('CitiBikeTripReport', default_args=default_args, catchup=False) as dag:
     start = DummyOperator(task_id="Start")
     end = DummyOperator(task_id="End")
 
+    check_new_files_task = PythonOperator(
+        task_id="s3_check_new_files",
+        python_callable=yaS3Sensor.check_new_files,
+        dag=dag
+    )
+
+    load_stg_tripdata = PythonOperator(
+        task_id="load_stg_tripdata",
+        python_callable=Loader.stg_load_tripdata,
+        dag=dag
+    )
+
+    dm_load_tripdata_cout = PythonOperator(
+        task_id="dm_load_tripdata_cout",
+        python_callable=Loader.dm_load_tripdata_cout,
+        dag=dag
+    )
+
+    dm_load_tripdata_avg = PythonOperator(
+        task_id="dm_load_tripdata_avg",
+        python_callable=Loader.dm_load_tripdata_avg,
+        dag=dag
+    )
+
+    dm_load_tripdata_by_gender = PythonOperator(
+        task_id="dm_load_tripdata_by_gender",
+        python_callable=Loader.dm_load_tripdata_by_gender,
+        dag=dag
+    )
+
     export_tripdata_count = PythonOperator(
         task_id="export_tripdata_count",
         python_callable=yaS3Saver.export_tripdata_count,
@@ -53,4 +83,24 @@ with DAG('CitiBikeTripReport', default_args=default_args, catchup=False) as dag:
         dag=dag
     )
 
-    start >> [export_tripdata_count, export_tripdata_avg, export_dm_tripdata_by_gender] >> end
+    set_last_load_date = PythonOperator(
+        task_id="set_last_load_date",
+        python_callable=set_last_load_date,
+        dag=dag
+    )
+
+    start >> check_new_files_task >> load_stg_tripdata
+
+    load_stg_tripdata >> dm_load_tripdata_cout
+    load_stg_tripdata >> dm_load_tripdata_avg
+    load_stg_tripdata >> dm_load_tripdata_by_gender
+
+    dm_load_tripdata_cout >> export_tripdata_count
+    dm_load_tripdata_avg >> export_tripdata_avg
+    dm_load_tripdata_by_gender >> export_dm_tripdata_by_gender
+
+    export_tripdata_count >> set_last_load_date
+    export_tripdata_avg >> set_last_load_date
+    export_dm_tripdata_by_gender >> set_last_load_date
+
+    set_last_load_date >> end
