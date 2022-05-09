@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 import pandas as pd
 from clickhouse_driver import Client
 
@@ -86,5 +86,10 @@ def export_tripdata_count():
 
     print("INFO: exporting ENDED")
 
+def test3():
+    r = (datetime.date(2015, 9, 1), 14, 10000)
+    d = r[0].strftime("%Y-%m-%d")
+    print(d, ',' + ','.join(list(map(str, r[1:]))))
 
-export_tripdata_count()
+
+test3()

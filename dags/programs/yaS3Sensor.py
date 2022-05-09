@@ -3,13 +3,15 @@ import time
 import os
 from airflow.models import Variable
 from datetime import datetime
+import logging as log
+from dag_config import common_settings
 
 
 def check_new_files():
     s3 = boto3.resource(service_name="s3",
                         endpoint_url='https://storage.yandexcloud.net',
-                        aws_access_key_id="YCAJELW71kr3JilXH81T8meDC",
-                        aws_secret_access_key="YCNQHqsYw0H2ot9Vq6DzsmHgpVZuUCjJ_jI6M9hs"
+                        aws_access_key_id=common_settings['aws_access_key_id'],
+                        aws_secret_access_key=common_settings['aws_secret_access_key']
                         )
 
     bucket = s3.Bucket("in-citibike-tripdata")
@@ -17,17 +19,24 @@ def check_new_files():
     var = Variable.get("s3_last_catch_date",
                        default_var="1900-01-01 00:00:00.000000+00:00")
     last_load_date = datetime.strptime(var, "%Y-%m-%d %H:%M:%S.%f%z")
-    print("last_load_date=", last_load_date)
+    log.info("last_load_date={}".format(last_load_date.strftime("%Y-%m-%d %H:%M:%S.%f%z")))
 
-    list_of_objects = bucket.objects.all()
-    while list_of_objects == 0:
+    list_of_objects = list(filter(lambda x: x.last_modified > last_load_date, bucket.objects.all()))
+    log.info("Checking for new files...")
+    while len(list(list_of_objects)) == 0:
         time.sleep(10)
-        list_of_objects = bucket.objects.all()
+        list_of_objects = list(filter(lambda x: x.last_modified > last_load_date, bucket.objects.all()))
+    log.info("{} files have been found".format(len(list_of_objects)))
 
-    processing_files_path = './dags/metadata/processing_files.txt'
+    processing_files_path = common_settings["processing_files_path"]
+    log.info(os.getcwd())
+    log.info("Replace metadata file {}".format(processing_files_path))
     if os.path.exists(processing_files_path):
         os.remove(processing_files_path)
+        log.info("Processing file has been deleted")
 
-    for f in filter(lambda x: x.last_modified > last_load_date, list_of_objects):
-        with open(processing_files_path, 'a') as pf:
-            pf.write(f.key + ";" + f.last_modified.strftime("%Y-%m-%d %H:%M:%S.%f%z") + "\n")
+    log.info("Writing new files and creation date into {}".format(processing_files_path))
+    for row in list_of_objects:
+        log.info(row.key + ";" + row.last_modified.strftime("%Y-%m-%d %H:%M:%S.%f%z") + "\n")
+        with open(processing_files_path, 'a') as f:
+            f.write(row.key + ";" + row.last_modified.strftime("%Y-%m-%d %H:%M:%S.%f%z") + "\n")

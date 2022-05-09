@@ -1,4 +1,1 @@
-201509-citibike-tripdata.zip;2022-04-27 13:47:41.717000+0000
-202203-citibike-tripdata.csv.zip;2022-04-28 07:41:05.318000+0000
-JC-201509-citibike-tripdata.csv.zip;2022-04-28 07:40:56.124000+0000
-JC-202203-citibike-tripdata.csv.zip;2022-04-28 07:40:56.292000+0000
+202007-citibike-tripdata.csv.zip;2022-05-09 12:14:40.979000+0000

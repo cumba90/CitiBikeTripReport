@@ -1,6 +1,7 @@
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from airflow.models import Variable
 from datetime import datetime
 from programs import yaS3Sensor, Loader, yaS3Saver
@@ -31,9 +32,10 @@ def set_last_load_date():
     Variable.set("s3_last_catch_date", last_load_date)
 
 
-with DAG('CitiBikeTripReport', default_args=default_args, catchup=False) as dag:
+with DAG("CitiBikeTripReport", default_args=default_args, catchup=False) as dag:
     start = DummyOperator(task_id="Start")
-    end = DummyOperator(task_id="End")
+    rerun_dag = TriggerDagRunOperator(task_id="rerun_dag",
+                                      trigger_dag_id="CitiBikeTripReport")
 
     check_new_files_task = PythonOperator(
         task_id="s3_check_new_files",
@@ -103,4 +105,4 @@ with DAG('CitiBikeTripReport', default_args=default_args, catchup=False) as dag:
     export_tripdata_avg >> set_last_load_date
     export_dm_tripdata_by_gender >> set_last_load_date
 
-    set_last_load_date >> end
+    set_last_load_date >> rerun_dag

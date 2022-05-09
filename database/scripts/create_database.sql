@@ -7,4 +7,4 @@ HOST ANY
 DEFAULT DATABASE citibyke_trip
 ;
 
-grant CREATE TABLE on *.* to citibyke;
+grant ALL on *.* to citibyke;
